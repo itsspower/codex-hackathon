@@ -57,3 +57,4 @@ coverage
 *.tgz
 .yarn-integrity
 .vscode-test
+supabase/.temp/
