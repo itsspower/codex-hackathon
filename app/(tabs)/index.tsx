@@ -1,13 +1,22 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
+import { Platform, StyleSheet, Pressable, Alert } from 'react-native';
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function HomeScreen() {
+  async function handleLogout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      Alert.alert('Logout failed', error.message);
+    }
+    // No need to manually redirect — app/_layout.tsx's session
+    // listener will detect the logout and bounce to Login automatically.
+  }
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -22,9 +31,10 @@ export default function HomeScreen() {
   <HelloWave />
 </ThemedView>
 
-<Link href='/(auth)/register' style={{ marginVertical: 16 }}>
-  <ThemedText type='link'>Go to Register (test)</ThemedText>
-</Link>
+<Pressable onPress={handleLogout} style={{ marginVertical: 16 }}>
+  <ThemedText type='link'>Log out (test)</ThemedText>
+</Pressable>
+
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
@@ -63,7 +73,6 @@ export default function HomeScreen() {
             </Link.Menu>
           </Link.Menu>
         </Link>
-
         <ThemedText>
           {`Tap the Explore tab to learn more about what's included in this starter app.`}
         </ThemedText>
@@ -81,7 +90,6 @@ export default function HomeScreen() {
     </ParallaxScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
