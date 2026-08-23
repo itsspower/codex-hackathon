@@ -17,10 +17,14 @@ export default function HomeScreen() {
           style={styles.reactLogo}
         />
       }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
+     <ThemedView style={styles.titleContainer}>
+  <ThemedText type="title">Welcome!</ThemedText>
+  <HelloWave />
+</ThemedView>
+
+<Link href='/(auth)/register' style={{ marginVertical: 16 }}>
+  <ThemedText type='link'>Go to Register (test)</ThemedText>
+</Link>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
