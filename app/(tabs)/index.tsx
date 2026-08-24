@@ -6,7 +6,6 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-
 export default function HomeScreen() {
   async function handleLogout() {
     const { error } = await supabase.auth.signOut();
@@ -16,7 +15,6 @@ export default function HomeScreen() {
     // No need to manually redirect — app/_layout.tsx's session
     // listener will detect the logout and bounce to Login automatically.
   }
-
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -30,11 +28,12 @@ export default function HomeScreen() {
   <ThemedText type="title">Welcome!</ThemedText>
   <HelloWave />
 </ThemedView>
-
 <Pressable onPress={handleLogout} style={{ marginVertical: 16 }}>
   <ThemedText type='link'>Log out (test)</ThemedText>
 </Pressable>
-
+<Link href='/(tabs)/profile-setup' style={{ marginVertical: 16 }}>
+  <ThemedText type='link'>Go to Profile Setup (test)</ThemedText>
+</Link>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
