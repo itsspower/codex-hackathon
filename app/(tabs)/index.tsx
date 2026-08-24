@@ -34,6 +34,9 @@ export default function HomeScreen() {
 <Link href='/(tabs)/profile-setup' style={{ marginVertical: 16 }}>
   <ThemedText type='link'>Go to Profile Setup (test)</ThemedText>
 </Link>
+<Link href='/(tabs)/opportunities' style={{ marginVertical: 16 }}>
+  <ThemedText type='link'>Go to Opportunities (test)</ThemedText>
+</Link>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
