@@ -1,9 +1,8 @@
-@'
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 import { SKILL_CATEGORIES } from '@/constants/skills';
+import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
@@ -117,4 +116,3 @@ const styles = StyleSheet.create({
   submitButton: { backgroundColor: '#1F3F7A', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 24, marginBottom: 40 },
   submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
-'@ | Set-Content -Path "app/(tabs)/profile-setup.tsx" -NoNewline

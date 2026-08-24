@@ -1,7 +1,6 @@
-@'
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 type Opportunity = {
   id: string;
@@ -132,4 +131,3 @@ const styles = StyleSheet.create({
   cardDescription: { fontSize: 14, color: '#444', marginTop: 10, lineHeight: 20 },
   skillsText: { fontSize: 12, color: '#777', marginTop: 8, fontStyle: 'italic' },
 });
-'@ | Set-Content -Path "app/(tabs)/opportunities.tsx" -NoNewline
