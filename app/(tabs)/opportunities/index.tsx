@@ -79,7 +79,7 @@ export default function OpportunitiesScreen() {
       contentContainerStyle={{ padding: 16 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       renderItem={({ item }) => (
-        <Link href={{ pathname: '/(tabs)/opportunities/[id]', params: { id: item.id } }} asChild>
+        <Link href={`/opportunities/${item.id}` as any} asChild>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{item.title}</Text>
             {item.company_organisation ? (

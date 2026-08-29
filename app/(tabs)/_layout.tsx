@@ -33,3 +33,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+<Tabs.Screen
+  name="chatbot"
+  options={{
+    title: 'Relink AI',
+    tabBarIcon: ({ color }) => (
+      <IconSymbol size={28} name="sparkles" color={color} />
+    ),
+  }}
+/>
