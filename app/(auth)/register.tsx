@@ -34,6 +34,11 @@ export default function RegisterScreen() {
       Alert.alert('Registration failed', 'No user returned - please try again.');
       return;
     }
+    if (!data.session) {
+      setLoading(false);
+      Alert.alert('Account created', 'Please confirm your email, then log in to continue.');
+      return;
+    }
     const table = role === 'student' ? 'student_profiles'
       : role === 'business' ? 'business_profiles'
       : 'alumni_profiles';
@@ -49,7 +54,6 @@ export default function RegisterScreen() {
       return;
     }
     Alert.alert('Success', 'Account created!');
-    router.replace('/(tabs)');
   }
 
   return (

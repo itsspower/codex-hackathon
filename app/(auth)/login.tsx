@@ -15,7 +15,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 
     if (error) {
@@ -23,8 +23,6 @@ export default function LoginScreen() {
       return;
     }
 
-    console.log('ACCESS TOKEN:', data.session?.access_token);
-    router.replace('/(tabs)');
   }
 
   return (

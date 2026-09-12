@@ -1,7 +1,7 @@
 // @ts-ignore: Deno runtime modules are resolved by the Supabase Edge runtime.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore: esm.sh modules are resolved by the Supabase Edge runtime.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.3";
 
 declare const Deno: {
   env: {
@@ -40,6 +40,7 @@ serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log("Chatbot auth header present:", Boolean(authHeader));
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing auth" }), {
         status: 401,
@@ -116,8 +117,20 @@ User's message: "${message}"
 
 Respond naturally and helpfully, using only the context data above.`;
 
+    const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!geminiApiKey) {
+      console.error("GEMINI_API_KEY is not configured.");
+      return new Response(JSON.stringify({
+        error: "Gemini API configuration error",
+        details: "GEMINI_API_KEY is not configured.",
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${Deno.env.get("GEMINI_API_KEY")}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,10 +140,56 @@ Respond naturally and helpfully, using only the context data above.`;
       }
     );
 
-    const geminiData = await geminiResponse.json();
-    const aiText =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      "Sorry, I couldn't generate a response right now.";
+    const geminiBody = await geminiResponse.text();
+    if (!geminiResponse.ok) {
+      console.error("Gemini API error:", {
+        status: geminiResponse.status,
+        response: geminiBody,
+      });
+      return new Response(JSON.stringify({
+        error: "Gemini API error",
+        details: geminiBody,
+      }), {
+        status: 502,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    let geminiData: {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{ text?: string }>;
+        };
+      }>;
+    };
+    try {
+      geminiData = JSON.parse(geminiBody);
+    } catch (error) {
+      console.error("Gemini API returned invalid JSON:", {
+        status: geminiResponse.status,
+        parseError: String(error),
+        response: geminiBody,
+      });
+      return new Response(JSON.stringify({
+        error: "Invalid Gemini API response",
+        details: "Gemini returned a response that was not valid JSON.",
+      }), {
+        status: 502,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const aiText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!aiText) {
+      console.error("Gemini API response is missing generated text:", geminiData);
+      return new Response(JSON.stringify({
+        error: "Invalid Gemini API response",
+        details: "Gemini response did not include candidates[0].content.parts[0].text.",
+      }), {
+        status: 502,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     // Log the conversation
     await supabase.from("chatbot_logs").insert({

@@ -2,17 +2,19 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { RelinkColors } from '@/constants/theme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: RelinkColors.primary,
+        tabBarInactiveTintColor: RelinkColors.tabIconDefault,
+        tabBarStyle: {
+          backgroundColor: RelinkColors.surface,
+          borderTopColor: RelinkColors.border,
+        },
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
@@ -20,25 +22,37 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="home" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="opportunities"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Opportunities',
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="work-outline" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="alumni"
+        options={{
+          title: 'Alumni',
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="groups" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          title: 'Alerts',
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="notifications-none" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="person-outline" color={color} />,
         }}
       />
     </Tabs>
   );
 }
-<Tabs.Screen
-  name="chatbot"
-  options={{
-    title: 'Relink AI',
-    tabBarIcon: ({ color }) => (
-      <IconSymbol size={28} name="sparkles" color={color} />
-    ),
-  }}
-/>

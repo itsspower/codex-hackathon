@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { saveStudentProfile } from '@/lib/studentProfile';
+
 export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
@@ -34,22 +36,19 @@ export default function ProfileSetupScreen() {
       return;
     }
 
-    const { error } = await supabase
-      .from('student_profiles')
-      .update({
+    const errorMessage = await saveStudentProfile(user.id, {
         name,
         surname,
         campus,
         course,
         interests: selectedInterests,
         interests_other: otherInterest || null,
-      })
-      .eq('user_id', user.id);
+      }, 'update');
 
     setLoading(false);
 
-    if (error) {
-      Alert.alert('Save failed', error.message);
+    if (errorMessage) {
+      Alert.alert('Save failed', errorMessage);
       return;
     }
 

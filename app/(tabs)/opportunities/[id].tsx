@@ -1,7 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { Card, PrimaryButton } from '@/components/relink-ui';
+import { RelinkColors, Spacing, Typography } from '@/constants/theme';
 
 type OpportunityDetail = {
   id: string;
@@ -21,6 +24,8 @@ type OpportunityDetail = {
 export default function OpportunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [opportunity, setOpportunity] = useState<OpportunityDetail | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -42,6 +47,71 @@ export default function OpportunityDetailScreen() {
 
     if (id) fetchDetail();
   }, [id]);
+
+  useEffect(() => {
+    async function fetchApplication() {
+      if (!id) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('applications')
+        .select('status')
+        .eq('student_id', user.id)
+        .eq('opportunity_id', id)
+        .maybeSingle();
+
+      if (data) setApplicationStatus(data.status);
+    }
+
+    void fetchApplication();
+  }, [id]);
+
+  async function applyToOpportunity() {
+    if (!id || applicationStatus || applying) return;
+    setApplying(true);
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      setApplying(false);
+      Alert.alert('Unable to apply', userError?.message ?? 'Please log in again.');
+      return;
+    }
+
+    const { data: existingApplication, error: existingError } = await supabase
+      .from('applications')
+      .select('status')
+      .eq('student_id', user.id)
+      .eq('opportunity_id', id)
+      .maybeSingle();
+
+    if (existingError) {
+      setApplying(false);
+      Alert.alert('Unable to apply', existingError.message);
+      return;
+    }
+
+    if (existingApplication) {
+      setApplying(false);
+      setApplicationStatus(existingApplication.status);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('applications')
+      .insert({ student_id: user.id, opportunity_id: id })
+      .select('status')
+      .single();
+
+    setApplying(false);
+    if (error) {
+      Alert.alert('Application failed', error.message);
+      return;
+    }
+
+    setApplicationStatus(data.status);
+    Alert.alert('Application submitted', 'Your application was submitted successfully.');
+  }
 
   if (loading) {
     return (
@@ -104,6 +174,16 @@ export default function OpportunityDetailScreen() {
           <Text style={styles.body}>{opportunity.application_instructions}</Text>
         </>
       ) : null}
+
+      <Card style={styles.applicationCard}>
+        {applicationStatus ? (
+          <Text style={styles.applicationStatus}>Application status: {applicationStatus}</Text>
+        ) : (
+          <PrimaryButton onPress={() => void applyToOpportunity()} disabled={applying}>
+            {applying ? 'Submitting...' : 'Apply to opportunity'}
+          </PrimaryButton>
+        )}
+      </Card>
     </ScrollView>
   );
 }
@@ -125,4 +205,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 20, marginBottom: 6, color: '#333' },
   body: { fontSize: 14, color: '#444', lineHeight: 20 },
+  applicationCard: { marginTop: Spacing.xl, marginBottom: Spacing.xl },
+  applicationStatus: { color: RelinkColors.primary, ...Typography.bodyStrong },
 });

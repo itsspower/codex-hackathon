@@ -1,112 +1,237 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, Pressable, Alert } from 'react-native';
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import {
+  Avatar,
+  Badge,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PrimaryButton,
+  ScreenContainer,
+  ScreenHeader,
+  SectionHeader,
+} from '@/components/relink-ui';
+import { RelinkColors, Radius, Spacing, Typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { profileCompletionScore } from '@/lib/studentProfile';
+
+type StudentProfile = {
+  name: string | null;
+  surname: string | null;
+  campus: string | null;
+  course: string | null;
+  interests: string[] | null;
+  interests_other: string | null;
+};
+
+type MatchedOpportunity = {
+  opportunity_id: string;
+  title: string;
+  match_count: number;
+  matched_tags: string[] | null;
+};
+
+type DashboardData = {
+  profile: StudentProfile;
+  matches: MatchedOpportunity[];
+};
+
 export default function HomeScreen() {
-  async function handleLogout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      Alert.alert('Logout failed', error.message);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage(null);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setLoading(false);
+      setErrorMessage(userError?.message ?? 'Your session could not be loaded.');
+      return;
     }
-    // No need to manually redirect — app/_layout.tsx's session
-    // listener will detect the logout and bounce to Login automatically.
+
+    const [{ data: profile, error: profileError }, { data: matches, error: matchesError }] =
+      await Promise.all([
+        supabase
+          .from('student_profiles')
+          .select('name, surname, campus, course, interests, interests_other')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase.rpc('match_opportunities_for_student', { p_student_id: user.id }),
+      ]);
+
+    if (profileError) {
+      setLoading(false);
+      setErrorMessage(profileError.message);
+      return;
+    }
+
+    if (matchesError) {
+      setLoading(false);
+      setErrorMessage(matchesError.message);
+      return;
+    }
+
+    setDashboard({
+      profile: profile ?? {
+        name: null,
+        surname: null,
+        campus: null,
+        course: null,
+        interests: [],
+        interests_other: null,
+      },
+      matches: ((matches ?? []) as MatchedOpportunity[]).slice(0, 3),
+    });
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadDashboard();
+    }, [loadDashboard])
+  );
+
+  if (loading && !dashboard) {
+    return <LoadingState message="Loading your dashboard..." />;
   }
+
+  if (errorMessage && !dashboard) {
+    return <ErrorState message={errorMessage} />;
+  }
+
+  if (!dashboard) {
+    return <EmptyState title="Your dashboard is empty" message="Complete your profile to get started." />;
+  }
+
+  const { profile, matches } = dashboard;
+  const firstName = profile.name?.trim() || 'there';
+  const avatarLabel = profile.name?.trim() || profile.surname?.trim();
+  const profileCompletion = profileCompletionScore(profile);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <ScreenContainer scroll>
+      <ScreenHeader
+        title="Home"
+        subtitle="Your career journey"
+        right={<Avatar label={avatarLabel} size={44} />}
+      />
+
+      <View style={styles.greeting}>
+        <Text style={styles.eyebrow}>RELINK</Text>
+        <Text style={styles.title}>Hi, {firstName}</Text>
+        <Text style={styles.subtitle}>Find your next career move with opportunities matched to your interests.</Text>
+      </View>
+
+      <Card style={styles.completionCard}>
+        <SectionHeader
+          title="Profile completion"
+          action={<Badge tone={profileCompletion === 100 ? 'success' : 'primary'}>{profileCompletion}%</Badge>}
         />
-      }>
-     <ThemedView style={styles.titleContainer}>
-  <ThemedText type="title">Welcome!</ThemedText>
-  <HelloWave />
-</ThemedView>
-<Pressable onPress={handleLogout} style={{ marginVertical: 16 }}>
-  <ThemedText type='link'>Log out (test)</ThemedText>
-</Pressable>
-<Link href='/(tabs)/profile-setup' style={{ marginVertical: 16 }}>
-  <ThemedText type='link'>Go to Profile Setup (test)</ThemedText>
-</Link>
-<Link href='/(tabs)/opportunities' style={{ marginVertical: 16 }}>
-  <ThemedText type='link'>Go to Opportunities (test)</ThemedText>
-</Link>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressValue, { width: `${profileCompletion}%` }]} />
+        </View>
+        <Text style={styles.cardText}>
+          {profileCompletion === 100
+            ? 'Your profile has the information needed for matching.'
+            : 'Add the missing profile details to improve your opportunity matches.'}
+        </Text>
+        {profileCompletion < 100 ? (
+          <Link href="/(tabs)/profile-setup" asChild>
+            <PrimaryButton>Complete profile</PrimaryButton>
+          </Link>
+        ) : null}
+      </Card>
+
+      <Card style={styles.assistantCard}>
+        <SectionHeader title="Relink AI Assistant" />
+        <Text style={styles.cardText}>
+          Ask for career guidance, preparation help, or ideas for your next step.
+        </Text>
+        <Link href="/(tabs)/chatbot" asChild>
+          <PrimaryButton>Open Relink AI</PrimaryButton>
         </Link>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </Card>
+
+      <View style={styles.section}>
+        <SectionHeader
+          title="Recommended for you"
+          action={
+            <Link href="/(tabs)/opportunities" asChild>
+              <Pressable>
+                <Text style={styles.sectionAction}>View all</Text>
+              </Pressable>
+            </Link>
+          }
+        />
+        {matches.length > 0 ? (
+          matches.map((match) => (
+            <Link key={match.opportunity_id} href={`/opportunities/${match.opportunity_id}` as any} asChild>
+              <Pressable>
+                <Card style={styles.opportunityCard}>
+                  <View style={styles.opportunityHeading}>
+                    <Text style={styles.opportunityTitle} numberOfLines={2}>{match.title}</Text>
+                    <Badge tone={match.match_count > 0 ? 'success' : 'neutral'}>
+                      {match.match_count} matching {match.match_count === 1 ? 'skill' : 'skills'}
+                    </Badge>
+                  </View>
+                  {match.matched_tags && match.matched_tags.length > 0 ? (
+                    <Text style={styles.matchText} numberOfLines={2}>
+                      Matched: {match.matched_tags.join(', ')}
+                    </Text>
+                  ) : (
+                    <Text style={styles.matchText}>Open opportunity from the latest matching results.</Text>
+                  )}
+                </Card>
+              </Pressable>
+            </Link>
+          ))
+        ) : (
+          <Card>
+            <EmptyState
+              title="No matching opportunities yet"
+              message="Add more interests to your profile or browse all open opportunities."
+            />
+          </Card>
+        )}
+      </View>
+    </ScreenContainer>
   );
 }
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  greeting: { marginBottom: Spacing.xl },
+  eyebrow: { color: RelinkColors.primary, ...Typography.label, letterSpacing: 1.5 },
+  title: { color: RelinkColors.text, ...Typography.display, marginTop: Spacing.sm },
+  subtitle: { color: RelinkColors.muted, ...Typography.body, marginTop: Spacing.sm },
+  completionCard: { marginBottom: Spacing.lg },
+  assistantCard: { marginBottom: Spacing.xl },
+  progressTrack: {
+    height: 8,
+    overflow: 'hidden',
+    borderRadius: Radius.pill,
+    backgroundColor: RelinkColors.surfaceElevated,
+    marginBottom: Spacing.md,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  progressValue: {
+    height: '100%',
+    borderRadius: Radius.pill,
+    backgroundColor: RelinkColors.primary,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  cardText: { color: RelinkColors.muted, ...Typography.body, marginBottom: Spacing.lg },
+  section: { marginBottom: Spacing.xl },
+  sectionAction: { color: RelinkColors.primary, ...Typography.label },
+  opportunityCard: { marginBottom: Spacing.md },
+  opportunityHeading: { gap: Spacing.sm },
+  opportunityTitle: { color: RelinkColors.text, ...Typography.bodyStrong },
+  matchText: { color: RelinkColors.muted, ...Typography.caption, marginTop: Spacing.md },
 });
