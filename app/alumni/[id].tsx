@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   Avatar,
@@ -8,6 +8,8 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  PrimaryButton,
+  SecondaryButton,
   ScreenContainer,
   ScreenHeader,
   SkillChip,
@@ -32,6 +34,10 @@ type AlumniProfile = {
 export default function AlumniDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [profile, setProfile] = useState<AlumniProfile | null>(null);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [requestStatus, setRequestStatus] = useState<string | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -57,6 +63,83 @@ export default function AlumniDetailScreen() {
     void loadProfile();
   }, [id]);
 
+  useEffect(() => {
+    async function loadExistingRequest() {
+      if (!id) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('mentorship_requests')
+        .select('status')
+        .eq('student_id', user.id)
+        .eq('alumni_id', id)
+        .in('status', ['pending', 'accepted'])
+        .maybeSingle();
+
+      if (!error && data) setRequestStatus(data.status);
+    }
+
+    void loadExistingRequest();
+  }, [id]);
+
+  async function submitMentorshipRequest() {
+    if (!id || requestStatus || requesting) return;
+
+    setRequesting(true);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      setRequesting(false);
+      Alert.alert('Unable to request mentorship', userError?.message ?? 'Please log in again.');
+      return;
+    }
+
+    const { data: existingRequest, error: existingError } = await supabase
+      .from('mentorship_requests')
+      .select('status')
+      .eq('student_id', user.id)
+      .eq('alumni_id', id)
+      .in('status', ['pending', 'accepted'])
+      .maybeSingle();
+
+    if (existingError) {
+      setRequesting(false);
+      Alert.alert('Unable to request mentorship', existingError.message);
+      return;
+    }
+
+    if (existingRequest) {
+      setRequesting(false);
+      setRequestStatus(existingRequest.status);
+      setRequestOpen(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('mentorship_requests')
+      .insert({
+        student_id: user.id,
+        alumni_id: id,
+        message: requestMessage.trim() || null,
+      });
+
+    setRequesting(false);
+    if (error) {
+      Alert.alert('Request failed', error.message);
+      return;
+    }
+
+    setRequestStatus('pending');
+    setRequestMessage('');
+    setRequestOpen(false);
+    Alert.alert(
+      'Mentorship request sent',
+      'Your request is now pending.',
+      [{ text: 'View requests', onPress: () => router.push('/(tabs)/mentorship') }, { text: 'Done' }]
+    );
+  }
+
   if (loading) return <LoadingState message="Loading alumni profile..." />;
   if (errorMessage) return <ErrorState message={errorMessage} />;
   if (!profile) return <EmptyState title="Alumni profile unavailable" />;
@@ -71,6 +154,13 @@ export default function AlumniDetailScreen() {
         <Text style={styles.name}>{name}</Text>
         {profile.current_job_title ? <Text style={styles.muted}>{profile.current_job_title}</Text> : null}
         {profile.current_company ? <Text style={styles.muted}>{profile.current_company}</Text> : null}
+        <View style={styles.requestAction}>
+          {requestStatus ? (
+            <Text style={styles.requestStatus}>Mentorship request: {requestStatus}</Text>
+          ) : (
+            <PrimaryButton onPress={() => setRequestOpen(true)}>Request Mentorship</PrimaryButton>
+          )}
+        </View>
       </Card>
       {profile.bio ? (
         <Card style={styles.section}>
@@ -93,15 +183,64 @@ export default function AlumniDetailScreen() {
           {profile.skills_interests.map((skill) => <SkillChip key={skill}>{skill}</SkillChip>)}
         </Card>
       ) : null}
+      <Modal
+        visible={requestOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setRequestOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <Card style={styles.modalCard}>
+            <Text style={styles.heading}>Request Mentorship</Text>
+            <Text style={styles.body}>
+              Add an optional message to introduce yourself.
+            </Text>
+            <TextInput
+              value={requestMessage}
+              onChangeText={setRequestMessage}
+              placeholder="Optional message"
+              placeholderTextColor={RelinkColors.muted}
+              multiline
+              style={styles.messageInput}
+            />
+            <PrimaryButton onPress={() => void submitMentorshipRequest()} disabled={requesting}>
+              {requesting ? 'Sending...' : 'Send request'}
+            </PrimaryButton>
+            <SecondaryButton onPress={() => setRequestOpen(false)} style={styles.cancelButton}>
+              Cancel
+            </SecondaryButton>
+          </Card>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   identity: { alignItems: 'center', marginBottom: Spacing.lg },
+  requestAction: { width: '100%', marginTop: Spacing.lg },
+  requestStatus: { color: RelinkColors.primary, ...Typography.bodyStrong, textAlign: 'center' },
   name: { color: RelinkColors.text, ...Typography.title, marginTop: Spacing.md },
   muted: { color: RelinkColors.muted, ...Typography.body, marginTop: 2 },
   section: { marginBottom: Spacing.lg },
   heading: { color: RelinkColors.text, ...Typography.heading, marginBottom: Spacing.md },
   body: { color: RelinkColors.muted, ...Typography.body, marginBottom: Spacing.sm },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  modalCard: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  messageInput: {
+    minHeight: 96,
+    color: RelinkColors.text,
+    ...Typography.body,
+    textAlignVertical: 'top',
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: RelinkColors.border,
+    borderRadius: 12,
+    marginBottom: Spacing.md,
+  },
+  cancelButton: { marginTop: Spacing.sm },
 });

@@ -1,10 +1,27 @@
-import { Link } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { Link, router } from 'expo-router';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text } from 'react-native';
 
 import { Card, PrimaryButton, ScreenContainer, ScreenHeader } from '@/components/relink-ui';
 import { RelinkColors, Spacing, Typography } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileTab() {
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    const { error } = await supabase.auth.signOut();
+    setLoggingOut(false);
+
+    if (error) {
+      Alert.alert('Logout failed', error.message);
+      return;
+    }
+
+    router.replace('/(entry)/splash');
+  }
+
   return (
     <ScreenContainer>
       <ScreenHeader title="Profile" subtitle="Manage your student profile" />
@@ -22,6 +39,13 @@ export default function ProfileTab() {
         <Link href="/(tabs)/mentorship" asChild>
           <PrimaryButton style={styles.secondaryButton}>View mentorship requests</PrimaryButton>
         </Link>
+        <PrimaryButton
+          onPress={() => void handleLogout()}
+          disabled={loggingOut}
+          style={styles.secondaryButton}
+        >
+          {loggingOut ? 'Logging out...' : 'Log out'}
+        </PrimaryButton>
       </Card>
     </ScreenContainer>
   );

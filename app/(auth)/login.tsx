@@ -1,4 +1,3 @@
-import { Href, router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
@@ -49,9 +48,6 @@ export default function LoginScreen() {
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Log In</Text>}
       </Pressable>
 
-      <Pressable onPress={() => router.push('/(auth)/register' as Href)}>
-        <Text style={styles.link}>Don't have an account? Register</Text>
-      </Pressable>
     </View>
   );
 }
@@ -62,5 +58,4 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 16 },
   submitButton: { backgroundColor: '#1F3F7A', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  link: { textAlign: 'center', marginTop: 16, color: '#1F3F7A' },
 });

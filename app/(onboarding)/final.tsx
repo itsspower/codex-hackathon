@@ -13,15 +13,7 @@ export default function FinalOnboardingScreen() {
   async function finishOnboarding() {
     const error = await saveProfile();
     if (error) {
-      if (error === 'Please log in or register before finishing your profile.') {
-        Alert.alert('Sign in to finish', error, [
-          { text: 'Login', onPress: () => router.replace('/(auth)/login') },
-          { text: 'Register', onPress: () => router.replace('/(auth)/register') },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-      } else {
-        Alert.alert('Could not save profile', error);
-      }
+      Alert.alert('Could not save profile', error);
       return;
     }
     router.replace('/(tabs)');

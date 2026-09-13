@@ -118,7 +118,7 @@ export default function RootLayout() {
 
     const group = segments[0] as string | undefined;
     if (!session) {
-      if (group !== '(auth)' && group !== '(entry)' && group !== '(onboarding)') {
+      if (group !== '(auth)' && group !== '(entry)') {
         router.replace('/(entry)/splash');
       }
       return;

@@ -100,13 +100,26 @@ export default function OpportunityDetailScreen() {
     const { data, error } = await supabase
       .from('applications')
       .insert({ student_id: user.id, opportunity_id: id })
-      .select('status')
+      .select('id, status')
       .single();
 
     setApplying(false);
     if (error) {
-      Alert.alert('Application failed', error.message);
+      Alert.alert(
+        error.code === '23505'
+          ? "You've already applied to this opportunity."
+          : 'Application failed',
+        error.code === '23505' ? undefined : error.message
+      );
       return;
+    }
+
+    const { error: warmWelcomeError } = await supabase.rpc('process_warm_welcome', {
+      application_id: data.id,
+    });
+
+    if (warmWelcomeError) {
+      console.warn('Warm Welcome processing failed:', warmWelcomeError);
     }
 
     setApplicationStatus(data.status);

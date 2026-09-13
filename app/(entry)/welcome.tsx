@@ -1,4 +1,4 @@
-import { Href, router } from 'expo-router';
+import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Card, PrimaryButton, ScreenContainer, SecondaryButton } from '@/components/relink-ui';
@@ -28,7 +28,7 @@ export default function WelcomeScreen() {
         </Card>
       </View>
 
-      <PrimaryButton onPress={() => router.push('/(onboarding)/skills' as Href)} style={styles.button}>
+      <PrimaryButton onPress={() => router.push('/(auth)/register')} style={styles.button}>
         Get Started
       </PrimaryButton>
       <SecondaryButton onPress={() => router.push('/(auth)/login')} style={styles.button}>

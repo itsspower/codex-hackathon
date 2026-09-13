@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import {
+  Badge,
   Card,
   EmptyState,
   ErrorState,
@@ -18,10 +19,25 @@ type Application = {
   status: string;
   submitted_at: string;
   opportunity: { title: string } | null;
+  warmWelcome: WarmWelcomeMatch | null;
 };
 
 type ApplicationRow = Omit<Application, 'opportunity'> & {
   opportunity: { title: string }[] | null;
+};
+
+type WarmWelcomeMatch = {
+  application_id: string;
+  alumni_id: string | null;
+  queue_position: number | null;
+  status: 'no_alumni_available' | 'matched';
+  alumniName?: string | null;
+};
+
+type AlumniName = {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 export default function ApplicationsScreen() {
@@ -49,11 +65,60 @@ export default function ApplicationsScreen() {
     if (error) {
       setErrorMessage(error.message);
     } else {
+      const applicationRows = (data ?? []) as ApplicationRow[];
+      const applicationIds = applicationRows.map((application) => application.id);
+      const { data: warmWelcomeData, error: warmWelcomeError } = applicationIds.length
+        ? await supabase
+            .from('warm_welcome_matches')
+            .select('application_id, alumni_id, queue_position, status')
+            .in('application_id', applicationIds)
+        : { data: [], error: null };
+
+      if (warmWelcomeError) {
+        console.warn('Warm Welcome data could not be loaded:', warmWelcomeError);
+      }
+
+      const warmWelcomeMatches = (warmWelcomeData ?? []) as WarmWelcomeMatch[];
+      const alumniIds = warmWelcomeMatches
+        .map((match) => match.alumni_id)
+        .filter((alumniId): alumniId is string => Boolean(alumniId));
+      const { data: alumniData, error: alumniError } = alumniIds.length
+        ? await supabase
+            .from('alumni_profiles')
+            .select('user_id, first_name, last_name')
+            .in('user_id', alumniIds)
+        : { data: [], error: null };
+
+      if (alumniError) {
+        console.warn('Warm Welcome alumni names could not be loaded:', alumniError);
+      }
+
+      const matchByApplicationId = new Map(
+        warmWelcomeMatches.map((match) => [match.application_id, match])
+      );
+      const alumniById = new Map(
+        ((alumniData ?? []) as AlumniName[]).map((alumni) => [alumni.user_id, alumni])
+      );
+
       setApplications(
-        ((data ?? []) as ApplicationRow[]).map((application) => ({
-          ...application,
-          opportunity: application.opportunity?.[0] ?? null,
-        }))
+        applicationRows.map((application) => {
+          const warmWelcome = matchByApplicationId.get(application.id) ?? null;
+          const alumni = warmWelcome?.alumni_id ? alumniById.get(warmWelcome.alumni_id) : undefined;
+
+          return {
+            ...application,
+            opportunity: application.opportunity?.[0] ?? null,
+            warmWelcome:
+              warmWelcome?.status === 'matched'
+                ? {
+                    ...warmWelcome,
+                    alumniName: alumni
+                      ? [alumni.first_name, alumni.last_name].filter(Boolean).join(' ')
+                      : null,
+                  }
+                : warmWelcome,
+          };
+        })
       );
     }
     setLoading(false);
@@ -81,6 +146,19 @@ export default function ApplicationsScreen() {
             <Text style={styles.meta}>
               Submitted {new Date(application.submitted_at).toLocaleDateString()}
             </Text>
+            {application.warmWelcome?.status === 'no_alumni_available' ? (
+              <Badge tone="neutral">No alumni connection available yet.</Badge>
+            ) : null}
+            {application.warmWelcome?.status === 'matched' ? (
+              <>
+                <Badge tone="success">
+                  Matched with {application.warmWelcome.alumniName ?? 'an alumnus'}
+                </Badge>
+                {application.warmWelcome.queue_position !== null ? (
+                  <Text style={styles.meta}>Position {application.warmWelcome.queue_position}</Text>
+                ) : null}
+              </>
+            ) : null}
           </Card>
         ))
       )}

@@ -47,12 +47,30 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="applications"
+        options={{
+          title: 'Applications',
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="assignment" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="mentorship"
+        options={{
+          title: 'Mentorship',
+          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="school" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <MaterialIcons size={24} name="person-outline" color={color} />,
         }}
       />
+      <Tabs.Screen name="opportunities/[id]" options={{ href: null }} />
+      <Tabs.Screen name="chatbot" options={{ href: null }} />
+      <Tabs.Screen name="explore" options={{ href: null }} />
+      <Tabs.Screen name="profile-setup" options={{ href: null }} />
     </Tabs>
   );
 }

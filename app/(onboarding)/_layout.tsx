@@ -96,7 +96,7 @@ function OnboardingProvider({ children }: PropsWithChildren) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setSaving(false);
-      return 'Please log in or register before finishing your profile.';
+      return 'Your session could not be loaded. Please log in again.';
     }
 
     const errorMessage = await saveStudentProfile(user.id, {
