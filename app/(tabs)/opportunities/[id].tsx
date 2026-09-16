@@ -137,7 +137,7 @@ export default function OpportunityDetailScreen() {
   if (errorMsg || !opportunity) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Couldn't load this opportunity{errorMsg ? `: ${errorMsg}` : '.'}</Text>
+        <Text style={styles.errorText}>Couldn&apos;t load this opportunity{errorMsg ? `: ${errorMsg}` : '.'}</Text>
       </View>
     );
   }

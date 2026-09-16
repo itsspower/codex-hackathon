@@ -57,7 +57,7 @@ export default function OpportunitiesScreen() {
   if (errorMsg) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Couldn't load opportunities: {errorMsg}</Text>
+        <Text style={styles.errorText}>Couldn&apos;t load opportunities: {errorMsg}</Text>
       </View>
     );
   }
@@ -65,7 +65,7 @@ export default function OpportunitiesScreen() {
   if (opportunities.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>No open opportunities yet.</Text>
+        <Text style={styles.emptyText}>No approved opportunities yet.</Text>
         <Text style={styles.emptySubtext}>Check back soon, or pull down to refresh.</Text>
       </View>
     );

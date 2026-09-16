@@ -164,14 +164,15 @@ export default function RootLayout() {
 
       if (role === 'student' && !studentProfileComplete) {
         if (group !== '(onboarding)') router.replace('/(onboarding)/skills' as Href);
-      } else if (
-        group === '(auth)' ||
-        group === '(entry)' ||
-        group !== '(tabs)' &&
-        group !== `(${role})` &&
-        !(role === 'student' && group === 'alumni')
-      ) {
-        router.replace(roleRoutes[role]);
+      } else {
+        const isStudentRoute =
+          role === 'student' &&
+          (group === '(tabs)' || group === 'alumni');
+        const isRoleRoute = group === `(${role})`;
+
+        if (!isStudentRoute && !isRoleRoute) {
+          router.replace(roleRoutes[role]);
+        }
       }
     }
 

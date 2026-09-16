@@ -11,8 +11,8 @@ export default function EducationOnboardingScreen() {
   if (loading) return null;
 
   function continueToFinal() {
-    if (!profile.name.trim() || !profile.surname.trim() || !profile.campus.trim() || !profile.course.trim()) {
-      Alert.alert('Complete your education details', 'Please provide your name, surname, campus, and course.');
+    if (!profile.campus.trim() || !profile.course.trim()) {
+      Alert.alert('Complete your education details', 'Please provide your campus and course.');
       return;
     }
     router.push('/(onboarding)/final' as Href);
