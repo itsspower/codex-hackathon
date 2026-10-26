@@ -1,6 +1,6 @@
-import { Href, Stack, useGlobalSearchParams, useSegments, router } from 'expo-router';
+import { Href, Stack, useSegments, router } from 'expo-router';
 import { Session } from '@supabase/supabase-js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -52,14 +52,11 @@ async function isStudentProfileComplete(userId: string): Promise<boolean> {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const segments = useSegments();
-  const { onboardingComplete } = useGlobalSearchParams<{ onboardingComplete?: string }>();
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [studentProfileComplete, setStudentProfileComplete] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [roleError, setRoleError] = useState<string | null>(null);
-  const studentRouteCheck = useRef<string | null>(null);
-  const completedOnboardingSignal = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -71,7 +68,8 @@ export default function RootLayout() {
       setRoleError(null);
 
       if (!nextSession) {
-        setRole(null);
+ 
+       setRole(null);
         setStudentProfileComplete(null);
         setLoading(false);
         return;
@@ -117,13 +115,9 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    if (loading || roleError) return;
+    if (loading || roleError || (role === 'student' && studentProfileComplete === null)) return;
 
     const group = segments[0] as string | undefined;
-    if (group !== '(tabs)') studentRouteCheck.current = null;
-
     if (!session) {
       if (group !== '(auth)' && group !== '(entry)') {
         router.replace('/(entry)/splash');
@@ -132,54 +126,17 @@ export default function RootLayout() {
     }
 
     if (role) {
-      const completionSignal =
-        typeof onboardingComplete === 'string' ? `${session.user.id}:${onboardingComplete}` : null;
-      const shouldRefreshAfterOnboarding =
-        role === 'student' &&
-        group === '(tabs)' &&
-        onboardingComplete === '1' &&
-        completedOnboardingSignal.current !== completionSignal;
-      const shouldRefreshOnTabsEntry =
-        role === 'student' &&
-        group === '(tabs)' &&
-        studentRouteCheck.current !== '(tabs)';
-
-      if (shouldRefreshAfterOnboarding || shouldRefreshOnTabsEntry) {
-        if (shouldRefreshAfterOnboarding) completedOnboardingSignal.current = completionSignal;
-        studentRouteCheck.current = '(tabs)';
-        setStudentProfileComplete(null);
-        void isStudentProfileComplete(session.user.id)
-          .then((complete) => {
-            if (!cancelled) setStudentProfileComplete(complete);
-          })
-          .catch((error) => {
-            if (!cancelled) {
-              setRoleError(error instanceof Error ? error.message : 'Unable to load your student profile.');
-            }
-          });
-        return;
-      }
-
-      if (role === 'student' && studentProfileComplete === null) return;
-
       if (role === 'student' && !studentProfileComplete) {
         if (group !== '(onboarding)') router.replace('/(onboarding)/skills' as Href);
-      } else {
-        const isStudentRoute =
-          role === 'student' &&
-          (group === '(tabs)' || group === 'alumni');
-        const isRoleRoute = group === `(${role})`;
-
-        if (!isStudentRoute && !isRoleRoute) {
-          router.replace(roleRoutes[role]);
-        }
+      } else if (
+        group === '(auth)' ||
+        group === '(entry)' ||
+        group !== '(tabs)' && group !== `(${role})`
+      ) {
+        router.replace(roleRoutes[role]);
       }
     }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, role, roleError, segments, session, studentProfileComplete, onboardingComplete]);
+  }, [loading, role, roleError, segments, session, studentProfileComplete]);
 
   if (loading) {
     return (

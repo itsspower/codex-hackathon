@@ -72,10 +72,10 @@ serve(async (req: Request) => {
     }
 
     // Get the user's role
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await supabase    .from("profiles")
       .select("role")
       .eq("id", user.id)
+
       .single();
 
     const role = profile?.role ?? "student";
